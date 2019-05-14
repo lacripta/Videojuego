@@ -59,13 +59,15 @@ MiJuego.level2.prototype = {
           that.support.statistics.spells.prepareHeal.cast(target);
           setTimeout(function() {
             if (target.alive) {
-              that.support.statistics.spells.prepareHeal.stop();
+              that.support.statistics.spells.prepareHeal.cancel(target);
               that.support.statistics.spells.heal.cast(target);
+
               target.motion.heal.play();
+
               that.support.statistics.busy = false;
-              hat.support.statistics.spells.heal.stop(target);
+              that.support.statistics.spells.heal.cancel(target);
             } else {
-              that.support.statistics.spells.prepareHeal.stop();
+              that.support.statistics.spells.prepareHeal.cancel(target);
               console.log(
                 target.statistics.id + " has died before beign healed."
               );
