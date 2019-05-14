@@ -32,7 +32,6 @@ MiJuego.level2.prototype = {
 
     juego.load.image("fire_bolt", "scenes/level2/assets/fire_bolt.png");
     juego.load.image("bg", "scenes/level2/assets/mapa_2.png");
-    juego.load.image("enemyBullet", "scenes/level2/assets/");
     juego.load.image("key", "scenes/level2/assets/boss_key.png");
   },
   create() {
@@ -45,17 +44,37 @@ MiJuego.level2.prototype = {
       troops: [],
       troopHit: function(target) {
         let that = this;
+        if (!target.alive) {
+          console.log("troop already defeated");
+          return;
+        }
+        if (that.support.statistics.casting) {
+          console.log(
+            that.support.statistics.id + ", is already casting spell " + ""
+          );
+          return;
+        }
         if (target.statistics.health <= 4) {
+          that.support.statistics.busy = true;
           that.support.statistics.spells.prepareHeal.cast(target);
           setTimeout(function() {
-            that.support.statistics.spells.prepareHeal.animation.stop();
-            that.support.statistics.spells.heal.cast(target);
-            target.motion.heal.play();
+            if (target.alive) {
+              that.support.statistics.spells.prepareHeal.stop();
+              that.support.statistics.spells.heal.cast(target);
+              target.motion.heal.play();
+              that.support.statistics.busy = false;
+              hat.support.statistics.spells.heal.stop(target);
+            } else {
+              that.support.statistics.spells.prepareHeal.stop();
+              console.log(
+                target.statistics.id + " has died before beign healed."
+              );
+            }
           }, 3000);
         }
       },
       troopDefeated: function(target) {
-        console.log(target.statistics.id + " has died.");
+        console.log(target.statistics.id + " has been defeated.");
       }
     };
 
@@ -79,7 +98,6 @@ MiJuego.level2.prototype = {
           knight.frame = 5;
           knight.statistics.pouch.slot1 = juego.key;
         }
-
         juego.enemyBatallion.troops.push(knight);
       }
     }
@@ -102,6 +120,7 @@ MiJuego.level2.prototype = {
       id: "enemy_mage_support",
       health: 10,
       power: 2,
+      busy: false,
       pouch: {
         slot1: undefined,
         slot2: undefined,
@@ -121,10 +140,24 @@ MiJuego.level2.prototype = {
           sfx: healSfx,
           casting: false,
           cast: function(target) {
-            this.animation.play();
-            this.sfx.play();
-            console.log(target);
-            target.statistics.health += this.power;
+            if (!target.alive) {
+              console.log(target.statistics.id + ", already defeated");
+              return;
+            }
+            if (!this.casting) {
+              console.log("casting heal spell at " + target.statistics.id);
+              this.animation.play();
+              this.sfx.play();
+              this.casting = true;
+              target.statistics.health += this.power;
+            } else {
+              console.log(this.name + ": spell is already beign casted.");
+            }
+          },
+          cancel: function(target) {
+            console.log(this.name + ": spell has finished.");
+            this.animation.stop();
+            this.casting = false;
           }
         },
         prepareHeal: {
@@ -133,10 +166,24 @@ MiJuego.level2.prototype = {
           animation: prepareHealAnim,
           casting: false,
           cast: function(target) {
-            if (this.casting) {
+            if (!target.alive) {
+              console.log(target.statistics.id + ", already defeated");
+              return;
+            }
+            if (!this.casting) {
+              console.log(
+                this.name + ": casting spell at " + target.statistics.id
+              );
               this.animation.play();
               this.casting = true;
+            } else {
+              console.log(this.name + ": spell is already beign casted.");
             }
+          },
+          cancel: function(target) {
+            console.log(this.name + ": spell has finished.");
+            this.animation.stop();
+            this.casting = false;
           }
         }
       }
@@ -264,7 +311,7 @@ MiJuego.level2.prototype = {
 
       setTimeout(function() {
         sprite.destroy();
-        juego.enemyBatallion.troopHit(sprite);
+        juego.enemyBatallion.troopDefeated(sprite);
       }, 1000);
     } else {
       sprite.frame = 0;
