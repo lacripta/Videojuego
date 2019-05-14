@@ -109,15 +109,6 @@ MiJuego.level2.prototype = {
     enemy_mage.scale.setTo(0.15, 0.15);
     enemy_mage.scale.x *= -1;
 
-    let healAnim = enemy_mage.animations.add("cast_heal", [1, 2, 0], 8, false);
-    let prepareHealAnim = enemy_mage.animations.add(
-      "prepare_heal",
-      [1, 0],
-      12,
-      true
-    );
-    let healSfx = juego.add.audio("heal_sfx");
-
     enemy_mage.statistics = {
       id: "enemy_mage_support",
       health: 10,
@@ -138,8 +129,13 @@ MiJuego.level2.prototype = {
         heal: {
           name: "Heal",
           power: 3,
-          animation: healAnim,
-          sfx: healSfx,
+          animation: enemy_mage.animations.add(
+            "cast_heal",
+            [1, 2, 0],
+            8,
+            false
+          ),
+          sfx: juego.add.audio("heal_sfx"),
           casting: false,
           cast: function(target) {
             if (!target.alive) {
@@ -158,14 +154,18 @@ MiJuego.level2.prototype = {
           },
           cancel: function(target) {
             console.log(this.name + ": spell has finished.");
-            this.animation.stop();
             this.casting = false;
           }
         },
         prepareHeal: {
           name: "Prepare Heal",
           power: 3,
-          animation: prepareHealAnim,
+          animation: enemy_mage.animations.add(
+            "prepare_heal",
+            [1, 0],
+            12,
+            true
+          ),
           casting: false,
           cast: function(target) {
             if (!target.alive) {
