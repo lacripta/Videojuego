@@ -38,49 +38,8 @@ MiJuego.level2.prototype = {
     juego.world.setBounds();
     juego.background = juego.add.image(0, 0, "bg");
 
-    juego.enemyBatallion = {
-      id: "main_force",
-      support: {},
-      troops: [],
-      troopHit: function(target) {
-        let that = this;
-        if (!target.alive) {
-          console.log("troop already defeated");
-          return;
-        }
-        if (that.support.statistics.casting) {
-          console.log(
-            that.support.statistics.id + ", is already casting spell " + ""
-          );
-          return;
-        }
-        if (target.statistics.health <= 4) {
-          that.support.statistics.busy = true;
-          that.support.statistics.spells.prepareHeal.cast(target);
-          setTimeout(function() {
-            if (target.alive) {
-              that.support.statistics.spells.prepareHeal.cancel(target);
-              that.support.statistics.spells.heal.cast(target);
-
-              target.motion.heal.play();
-
-              that.support.statistics.busy = false;
-              that.support.statistics.spells.heal.cancel(target);
-            } else {
-              that.support.statistics.spells.prepareHeal.cancel(target);
-              console.log(
-                target.statistics.id + " has died before beign healed."
-              );
-            }
-          }, 3000);
-        }
-      },
-      troopDefeated: function(target) {
-        console.log(target.statistics.id + " has been defeated.");
-      }
-    };
-
-    this.addLevelKey();
+    juego.enemyBatallion = this.addEnemyBatallion();
+    juego.key = this.addLevelKey();
     juego.mage = this.addMainCharacter();
 
     let enemyMage = this.addEnemyWizard();
@@ -103,6 +62,50 @@ MiJuego.level2.prototype = {
         juego.enemyBatallion.troops.push(knight);
       }
     }
+  },
+  addEnemyBatallion() {
+    return {
+      id: "main_force",
+      support: {},
+      troops: [],
+      troopHit: function(target) {
+        let that = this;
+        if (!target.alive) {
+          console.log("troop already defeated");
+          return;
+        }
+        if (that.support.statistics.busy) {
+          console.log(
+            that.support.statistics.id + ", is already casting spell " + ""
+          );
+          return;
+        }
+        if (target.statistics.health <= 4) {
+          let healDelay = 3000 - that.troops.length * 200;
+          that.support.statistics.busy = true;
+          that.support.statistics.spells.prepareHeal.cast(target);
+          setTimeout(function() {
+            if (target.alive) {
+              that.support.statistics.spells.prepareHeal.cancel(target);
+              that.support.statistics.spells.heal.cast(target);
+
+              target.motion.heal.play();
+
+              that.support.statistics.busy = false;
+              that.support.statistics.spells.heal.cancel(target);
+            } else {
+              that.support.statistics.spells.prepareHeal.cancel(target);
+              console.log(
+                target.statistics.id + " has died before beign healed."
+              );
+            }
+          }, healDelay);
+        }
+      },
+      troopDefeated: function(target) {
+        console.log(target.statistics.id + " has been defeated.");
+      }
+    };
   },
   addEnemyWizard() {
     let enemy_mage = juego.add.sprite(600, 500, "enemy_mage");
@@ -234,13 +237,15 @@ MiJuego.level2.prototype = {
     return knight;
   },
   addLevelKey() {
-    juego.key = juego.add.image(0, 0, "key");
-    juego.key.visible = false;
-    juego.key.statistics = {
+    let key = juego.add.image(0, 0, "key");
+    key.visible = false;
+    key.statistics = {
       owner: undefined
     };
+    return key;
   },
   addMainCharacter() {
+    let that = this;
     let mage = juego.add.sprite(100, 500, "mage");
     mage.scale.setTo(0.15, 0.15);
     let fireboltAnim = mage.animations.add(
@@ -252,7 +257,7 @@ MiJuego.level2.prototype = {
     let fireboltSfx = juego.add.audio("firebolt_sfx");
 
     mage.animations.currentAnim.onComplete.add(function(_self) {
-      if (juego.key.statistics.owner.statistics.id === _self.statistics.id) {
+      if (that.targetHoldsLevelKey(_self)) {
         _self.frame = 5;
       }
     });
@@ -299,13 +304,14 @@ MiJuego.level2.prototype = {
     return mage;
   },
   enemyKinghtHitCallback(sprite, pointer) {
+    let that = this;
     juego.mage.statistics.spells.firebolt.cast(sprite);
     juego.enemyBatallion.troopHit(sprite);
 
     if (sprite.statistics.health <= 0) {
       sprite.motion.die.play();
 
-      if (juego.key.statistics.owner.statistics.id === sprite.statistics.id) {
+      if (that.targetHoldsLevelKey(sprite)) {
         juego.mage.statistics.pouch.slot1 = juego.key;
         juego.key.statistics.owner = juego.mage;
         juego.mage.frame = 5;
@@ -321,10 +327,13 @@ MiJuego.level2.prototype = {
     }
 
     sprite.animations.currentAnim.onComplete.add(function(_self, animation) {
-      if (juego.key.statistics.owner.statistics.id === _self.statistics.id) {
+      if (that.targetHoldsLevelKey(_self)) {
         _self.frame = 5;
       }
     });
+  },
+  targetHoldsLevelKey(target) {
+    return juego.key.statistics.owner.statistics.id === target.statistics.id;
   },
   update() {}
 };
